@@ -3,25 +3,31 @@
 <head>
   <meta charset="UTF-8">
   <title>梁材料計算アプリ</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; }
     label { display: block; margin-top: 10px; }
-    input { margin-left: 10px; }
+    input { margin-left: 10px; width: 120px; }
     button { margin-top: 20px; padding: 10px 20px; }
-    pre { background: #f4f4f4; padding: 10px; margin-top: 20px; }
+    pre { background: #f4f4f4; padding: 10px; margin-top: 20px; white-space: pre-line; }
   </style>
 </head>
 <body>
   <h1>梁材料計算アプリ</h1>
+  
+  <h2>通常材料</h2>
   <label>W: <input id="w" type="number"></label>
   <label>D: <input id="d" type="number"></label>
   <label>H: <input id="h" type="number"></label>
+  
   <h2>カーテンレール (任意)</h2>
   <label>CR W: <input id="crw" type="number"></label>
   <label>CR D: <input id="crd" type="number"></label>
+  
   <button onclick="calculate()">計算する</button>
+  
   <pre id="output"></pre>
-
+  
   <script>
     function calculate() {
       const W = parseInt(document.getElementById("w").value);
@@ -29,49 +35,48 @@
       const H = parseInt(document.getElementById("h").value);
       const CRW = parseInt(document.getElementById("crw").value) || null;
       const CRD = parseInt(document.getElementById("crd").value) || null;
-
+      
       let result = "【計算結果】\n";
-
-      // Wルール
-      result += `W材: ${W}mm ×1本, ${W-60}mm ×1本\n`;
-
-      // Dルール
+      
+      // --- Wルール ---
+      result += `W材: ${W}mm ×2本, ${W-60}mm ×1本\n`;
+      
+      // --- Dルール ---
       let Dlength = D - 43;
       if (CRD !== null) {
-        Dlength = Dlength - (CRD - 30);
+        Dlength -= (CRD - 30);
       }
-      result += `D材: ${Dlength}mm ×2本\n`;
-
-      // D追加本数 (W÷455, 余り>400なら+1)
-      let Dextra = Math.floor(W / 455);
-      if (W % 455 > 400) Dextra++;
-      result += `D追加材: ${Dlength}mm ×${Dextra}本\n`;
-
-      // Hルール
+      let Dcount = 2 + Math.floor(W / 455);
+      if (W % 455 > 400) Dcount++;
+      result += `D材: ${Dlength}mm ×${Dcount}本\n`;
+      
+      // --- Hルール ---
+      let Hlength = H - 63;
       let Hcount = 2 + Math.floor(W / 455);
       if (W % 455 > 400) Hcount++;
-      result += `H材: ${H-63}mm ×${Hcount}本\n`;
-
-      // CRルール
+      result += `H材: ${Hlength}mm ×${Hcount}本\n`;
+      
+      // --- CRルール ---
       if (CRW && CRD) {
         let CRval = CRD - 30;
         let combos = [];
-        for (let a=0; a<=CRval/30; a++) {
-          for (let b=0; b<=CRval/40; b++) {
+        for (let a = 0; a <= CRval / 30; a++) {
+          for (let b = 0; b <= CRval / 40; b++) {
             if (30*a + 40*b === CRval) {
               combos.push({a, b});
             }
           }
         }
-        if (combos.length>0) {
+        if (combos.length > 0) {
           let c = combos[0];
-          result += `CR材: 30mm ×${c.a}本, 40mm ×${c.b}本\n`;
+          result += `CR材: 30の${CRW}mm ×${c.a}本, 40の${CRW}mm ×${c.b}本\n`;
         } else {
           result += `CR材: 組み合わせが見つかりません\n`;
         }
+        // CR追加材: 通常W-60
         result += `CR追加材: ${W-60}mm ×1本\n`;
       }
-
+      
       document.getElementById("output").textContent = result;
     }
   </script>
