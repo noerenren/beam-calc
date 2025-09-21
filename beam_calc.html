@@ -2,82 +2,88 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>梁材料計算アプリ</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>梁材計算アプリ</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; }
+    body { font-family: Arial, sans-serif; margin: 20px; }
     label { display: block; margin-top: 10px; }
-    input { margin-left: 10px; width: 120px; }
-    button { margin-top: 20px; padding: 10px 20px; }
-    pre { background: #f4f4f4; padding: 10px; margin-top: 20px; white-space: pre-line; }
+    textarea { width: 100%; height: 200px; margin-top: 20px; }
+    button { margin-top: 20px; padding: 10px; }
   </style>
 </head>
 <body>
-  <h1>梁材料計算アプリ</h1>
-  
-  <h2>通常材料</h2>
-  <label>W: <input id="w" type="number"></label>
-  <label>D: <input id="d" type="number"></label>
-  <label>H: <input id="h" type="number"></label>
-  
-  <h2>カーテンレール (任意)</h2>
-  <label>CR W: <input id="crw" type="number"></label>
-  <label>CR D: <input id="crd" type="number"></label>
-  
+  <h1>梁材計算アプリ</h1>
+  <label>W: <input type="number" id="W"></label>
+  <label>D: <input type="number" id="D"></label>
+  <label>H: <input type="number" id="H"></label>
+
+  <h2>カーテンレール (CR)</h2>
+  <label>CR W: <input type="number" id="CRW"></label>
+  <label>CR D: <input type="number" id="CRD"></label>
+
   <button onclick="calculate()">計算する</button>
-  
-  <pre id="output"></pre>
-  
+  <textarea id="result" readonly></textarea>
+
   <script>
     function calculate() {
-      const W = parseInt(document.getElementById("w").value);
-      const D = parseInt(document.getElementById("d").value);
-      const H = parseInt(document.getElementById("h").value);
-      const CRW = parseInt(document.getElementById("crw").value) || null;
-      const CRD = parseInt(document.getElementById("crd").value) || null;
-      
-      let result = "【計算結果】\n";
-      
-      // --- Wルール ---
-      result += `W材: ${W}mm ×2本, ${W-60}mm ×1本\n`;
-      
-      // --- Dルール ---
-      let Dlength = D - 43;
-      if (CRD !== null) {
-        Dlength -= (CRD - 30);
+      const W = parseInt(document.getElementById("W").value);
+      const D = parseInt(document.getElementById("D").value);
+      const H = parseInt(document.getElementById("H").value);
+      const CRW = parseInt(document.getElementById("CRW").value);
+      const CRD = parseInt(document.getElementById("CRD").value);
+
+      let result = "";
+
+      // --- W材 ---
+      result += `W材: ${W}mm ×2本, ${W - 60}mm ×1本\n`;
+
+      // --- D材 ---
+      let Dlen = D - 43;
+      let dCount = 2 + Math.floor(W / 455);
+      if (W % 455 > 400) dCount++;
+
+      if (!isNaN(CRD)) {
+        // CRがある場合
+        let unaffected = 2;
+        let affected = dCount - 2;
+        let adjusted = Dlen - (CRD - 30);
+        result += `D材: ${Dlen}mm ×${unaffected}本, ${adjusted}mm ×${affected}本\n`;
+      } else {
+        // CRなし
+        result += `D材: ${Dlen}mm ×${dCount}本\n`;
       }
-      let Dcount = 2 + Math.floor(W / 455);
-      if (W % 455 > 400) Dcount++;
-      result += `D材: ${Dlength}mm ×${Dcount}本\n`;
-      
-      // --- Hルール ---
-      let Hlength = H - 63;
-      let Hcount = 2 + Math.floor(W / 455);
-      if (W % 455 > 400) Hcount++;
-      result += `H材: ${Hlength}mm ×${Hcount}本\n`;
-      
-      // --- CRルール ---
-      if (CRW && CRD) {
-        let CRval = CRD - 30;
-        let combos = [];
-        for (let a = 0; a <= CRval / 30; a++) {
-          for (let b = 0; b <= CRval / 40; b++) {
-            if (30*a + 40*b === CRval) {
-              combos.push({a, b});
-            }
+
+      // --- H材 ---
+      let Hlen = H - 63;
+      let hCount = 2 + Math.floor(W / 455);
+      if (W % 455 > 400) hCount++;
+      result += `H材: ${Hlen}mm ×${hCount}本\n`;
+
+      // --- CR材 ---
+      if (!isNaN(CRW) && !isNaN(CRD)) {
+        let target = CRD - 30;
+        let combo = null;
+
+        for (let b = 0; b <= Math.floor(target / 40); b++) {
+          let rest = target - b * 40;
+          if (rest % 30 === 0) {
+            let a = rest / 30;
+            combo = {a, b};
+            break;
           }
         }
-        if (combos.length > 0) {
-          let c = combos[0];
-          result += `CR材: 30の${CRW}mm ×${c.a}本, 40の${CRW}mm ×${c.b}本\n`;
+
+        if (combo) {
+          if (combo.a > 0) result += `CR材: 30の${CRW}mm ×${combo.a}本\n`;
+          if (combo.b > 0) result += `CR材: 40の${CRW}mm ×${combo.b}本\n`;
         } else {
-          result += `CR材: 組み合わせが見つかりません\n`;
+          result += "CR材: 組み合わせエラー\n";
         }
-        // CR追加材: 通常W-60
-        result += `CR追加材: ${W-60}mm ×1本\n`;
+
+        // CR追加材 (通常W - 60)
+        result += `CR追加材: ${W - 60}mm ×1本\n`;
       }
-      
-      document.getElementById("output").textContent = result;
+
+      document.getElementById("result").value = result;
     }
   </script>
 </body>
